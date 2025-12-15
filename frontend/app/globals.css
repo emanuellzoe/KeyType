@@ -344,6 +344,96 @@ body {
   letter-spacing: 0.03em;
 }
 
+/* Clean Typing Area - No Box */
+.typing-area-clean {
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
+  font-size: 1.75rem;
+  line-height: 2.4;
+  letter-spacing: 0.02em;
+  max-height: 180px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  padding: 12px;
+  user-select: none;
+  text-align: left;
+  scroll-behavior: smooth;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.typing-area-clean::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Fade effect on top and bottom */
+.typing-area-clean::before,
+.typing-area-clean::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.word-clean {
+  display: inline-block;
+  margin: 0 14px 8px 0;
+  padding: 2px 0;
+  transition: all 0.2s ease;
+  color: var(--text-muted);
+}
+
+.word-clean.active {
+  color: var(--text-secondary);
+}
+
+.word-clean.completed {
+  opacity: 0.5;
+}
+
+.word-clean.error {
+  border-bottom: 2px solid var(--incorrect);
+}
+
+.char-clean {
+  display: inline-block;
+  transition: color 0.1s ease;
+  position: relative;
+}
+
+.char-clean.pending {
+  color: var(--text-muted);
+}
+
+.char-clean.correct {
+  color: var(--correct);
+}
+
+.char-clean.incorrect {
+  color: var(--incorrect);
+}
+
+.char-clean.extra {
+  color: var(--incorrect);
+  opacity: 0.7;
+}
+
+.char-clean.current::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2.5px;
+  height: 100%;
+  background: var(--blue-400);
+  animation: cursor-blink 1s infinite;
+  box-shadow: 0 0 8px var(--blue-400);
+}
+
+/* Old styles for backward compatibility */
 .word {
   display: inline-block;
   margin: 0 12px 12px 0;

@@ -215,6 +215,7 @@ export default function Home() {
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsContainerRef = useRef<HTMLDivElement>(null);
+  const currentWordRef = useRef<HTMLSpanElement>(null);
 
   // Initialize words
   const initializeTest = useCallback(() => {
@@ -246,6 +247,32 @@ export default function Home() {
   useEffect(() => {
     initializeTest();
   }, [initializeTest]);
+
+  // Auto-scroll to current word
+  useEffect(() => {
+    if (currentWordRef.current && wordsContainerRef.current) {
+      const container =
+        wordsContainerRef.current.querySelector(".typing-area-clean");
+      if (container) {
+        const wordElement = currentWordRef.current;
+        const containerRect = container.getBoundingClientRect();
+        const wordRect = wordElement.getBoundingClientRect();
+
+        // Calculate relative position
+        const wordOffsetTop =
+          wordRect.top - containerRect.top + container.scrollTop;
+        const lineHeight = wordRect.height * 1.5;
+
+        // Scroll if word is below the first line
+        if (wordOffsetTop > lineHeight) {
+          container.scrollTo({
+            top: wordOffsetTop - lineHeight,
+            behavior: "smooth",
+          });
+        }
+      }
+    }
+  }, [currentWordIndex]);
 
   // Timer effect
   useEffect(() => {
@@ -560,7 +587,7 @@ export default function Home() {
         <div
           ref={wordsContainerRef}
           onClick={handleWordsClick}
-          className="glass-card w-full p-10 md:p-12 cursor-text animate-fade-in-up relative overflow-hidden"
+          className="w-full cursor-text animate-fade-in-up relative"
           style={{ animationDelay: "0.2s" }}
         >
           {/* Hidden Input */}
@@ -575,19 +602,22 @@ export default function Home() {
             disabled={isFinished}
           />
 
-          {/* Words Display */}
-          <div className="typing-area max-h-[180px] overflow-hidden select-none">
+          {/* Words Display - Clean, no box */}
+          <div className="typing-area-clean">
             {wordStates.map((wordState, wordIdx) => (
               <span
                 key={wordIdx}
-                className={`word ${
+                ref={wordIdx === currentWordIndex ? currentWordRef : null}
+                className={`word-clean ${
+                  wordIdx < currentWordIndex ? "completed" : ""
+                } ${wordIdx === currentWordIndex ? "active" : ""} ${
                   wordState.hasError && wordState.completed ? "error" : ""
                 }`}
               >
                 {wordState.chars.map((charState, charIdx) => (
                   <span
                     key={charIdx}
-                    className={`char ${charState.state} ${
+                    className={`char-clean ${charState.state} ${
                       wordIdx === currentWordIndex &&
                       charIdx === currentCharIndex
                         ? "current"
@@ -600,18 +630,10 @@ export default function Home() {
                 {/* Cursor at end of word if we're past all characters */}
                 {wordIdx === currentWordIndex &&
                   currentCharIndex >= words[wordIdx]?.length && (
-                    <span className="char current"> </span>
+                    <span className="char-clean current"> </span>
                   )}
               </span>
             ))}
-          </div>
-
-          {/* Focus overlay when not focused */}
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center opacity-0 transition-opacity pointer-events-none"
-            id="focus-overlay"
-          >
-            <span className="text-blue-400 text-lg">Click to focus</span>
           </div>
         </div>
 
