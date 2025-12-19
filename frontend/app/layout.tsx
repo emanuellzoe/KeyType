@@ -8,12 +8,6 @@ const inter = Inter({
   display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   title: "KeyType | Modern Typing Test",
   description:
