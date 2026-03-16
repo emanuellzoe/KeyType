@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 // Word lists for typing test
 const wordLists = {
@@ -192,10 +192,22 @@ interface WordState {
   hasError: boolean;
 }
 
+function buildWordStates(sourceWords: string[]): WordState[] {
+  return sourceWords.map((word) => ({
+    chars: word.split("").map((char) => ({ char, state: "pending" as const })),
+    completed: false,
+    hasError: false,
+  }));
+}
+
 export default function Home() {
+  const initialWords = useMemo(() => generateWords(100), []);
+
   // Game state
-  const [words, setWords] = useState<string[]>([]);
-  const [wordStates, setWordStates] = useState<WordState[]>([]);
+  const [words, setWords] = useState<string[]>(initialWords);
+  const [wordStates, setWordStates] = useState<WordState[]>(() =>
+    buildWordStates(initialWords)
+  );
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentCharIndex, setCurrentCharIndex] = useState(0);
   const [inputValue, setInputValue] = useState("");
@@ -217,22 +229,15 @@ export default function Home() {
   const currentWordRef = useRef<HTMLSpanElement>(null);
 
   // Initialize words
-  const initializeTest = useCallback(() => {
+  const initializeTest = useCallback((timeOverride?: number) => {
+    const duration = timeOverride ?? selectedTime;
     const newWords = generateWords(100);
     setWords(newWords);
-    setWordStates(
-      newWords.map((word) => ({
-        chars: word
-          .split("")
-          .map((char) => ({ char, state: "pending" as const })),
-        completed: false,
-        hasError: false,
-      }))
-    );
+    setWordStates(buildWordStates(newWords));
     setCurrentWordIndex(0);
     setCurrentCharIndex(0);
     setInputValue("");
-    setTimeLeft(selectedTime);
+    setTimeLeft(duration);
     setIsRunning(false);
     setIsFinished(false);
     setCorrectChars(0);
@@ -241,10 +246,10 @@ export default function Home() {
     inputRef.current?.focus();
   }, [selectedTime]);
 
-  // Initialize on mount and when time changes
+  // Keep input focused for immediate typing
   useEffect(() => {
-    initializeTest();
-  }, [initializeTest]);
+    inputRef.current?.focus();
+  }, []);
 
   // Auto-scroll to current word
   useEffect(() => {
@@ -310,6 +315,11 @@ export default function Home() {
   }, [correctChars, incorrectChars, totalKeystrokes, selectedTime, timeLeft]);
 
   const stats = calculateStats();
+  const progressPercentage = Math.min(
+    100,
+    Math.max(0, ((selectedTime - timeLeft) / selectedTime) * 100)
+  );
+  const displayedTime = isRunning || isFinished ? timeLeft : selectedTime;
 
   // Handle input change
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -465,24 +475,26 @@ export default function Home() {
   // Change time mode
   const handleTimeChange = (time: number) => {
     setSelectedTime(time);
-    setTimeLeft(time);
-    initializeTest();
+    initializeTest(time);
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center px-6 py-12 md:py-16 lg:py-20">
-      {/* Header */}
-      <header className="w-full max-w-4xl mb-16 md:mb-20 animate-fade-in-up">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-lg shadow-lg animate-pulse-glow">
-              K
+    <main className="page-shell">
+      <header className="w-full max-w-5xl animate-fade-in-up">
+        <div className="top-nav glass-panel">
+          <div className="brand-cluster">
+            <div className="brand-mark">K</div>
+            <div>
+              <h1 className="brand-title">KeyType</h1>
+              <p className="brand-subtitle">Speed, rhythm, precision.</p>
             </div>
-            <h1 className="text-2xl font-bold gradient-text">KeyType</h1>
           </div>
 
-          <nav className="flex items-center gap-2">
-            <button className="btn-icon" title="Settings">
+          <nav className="nav-actions">
+            <span className="status-pill">
+              {isFinished ? "Session complete" : isRunning ? "Live test" : "Ready"}
+            </span>
+            <button className="btn-icon" title="Settings" aria-label="Settings">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-5 w-5"
@@ -504,7 +516,7 @@ export default function Home() {
                 />
               </svg>
             </button>
-            <button className="btn-icon" title="Profile">
+            <button className="btn-icon" title="Profile" aria-label="Profile">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-5 w-5"
@@ -524,14 +536,12 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="w-full max-w-4xl flex-1 flex flex-col items-center justify-center gap-10 md:gap-12">
-        {/* Time Mode Selector */}
+      <section className="content-shell w-full max-w-5xl">
         <div
-          className="glass-card px-4 py-3 flex items-center gap-2 animate-fade-in-up"
-          style={{ animationDelay: "0.1s" }}
+          className="mode-strip glass-panel animate-fade-in-up"
+          style={{ animationDelay: "0.05s" }}
         >
-          <div className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400">
+          <div className="mode-label">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-4 w-4"
@@ -546,48 +556,55 @@ export default function Home() {
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span>time</span>
+            <span>Duration</span>
           </div>
-          <div className="w-px h-6 bg-blue-500/20" />
           {timeOptions.map((time) => (
             <button
               key={time}
               onClick={() => handleTimeChange(time)}
               className={`mode-btn ${selectedTime === time ? "active" : ""}`}
             >
-              {time}
+              {time}s
             </button>
           ))}
         </div>
 
-        {/* Stats Display (During/After Test) */}
-        {(isRunning || isFinished) && (
-          <div className="glass-card px-10 py-6 flex items-center gap-10 md:gap-12 animate-scale-in">
+        <div
+          className="stats-shell animate-fade-in-up"
+          style={{ animationDelay: "0.1s" }}
+        >
+          <div className="stats-grid glass-panel">
             <div className="stat-item">
-              <div className="stat-value text-shadow-glow">{timeLeft}</div>
-              <div className="stat-label">seconds</div>
+              <p className="stat-value text-shadow-glow">{displayedTime}</p>
+              <p className="stat-label">seconds</p>
             </div>
-            <div className="w-px h-12 bg-blue-500/20" />
             <div className="stat-item">
-              <div className="stat-value">{stats.wpm}</div>
-              <div className="stat-label">wpm</div>
+              <p className="stat-value">{stats.wpm}</p>
+              <p className="stat-label">wpm</p>
             </div>
-            <div className="w-px h-12 bg-blue-500/20" />
             <div className="stat-item">
-              <div className="stat-value">{stats.accuracy}%</div>
-              <div className="stat-label">accuracy</div>
+              <p className="stat-value">{stats.accuracy}%</p>
+              <p className="stat-label">accuracy</p>
+            </div>
+            <div className="stat-item">
+              <p className="stat-value">{stats.rawWpm}</p>
+              <p className="stat-label">raw</p>
             </div>
           </div>
-        )}
+          <div className="progress-track">
+            <div
+              className="progress-fill"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+        </div>
 
-        {/* Typing Area */}
-        <div
+        <section
           ref={wordsContainerRef}
           onClick={handleWordsClick}
-          className="w-full cursor-text animate-fade-in-up relative"
-          style={{ animationDelay: "0.2s" }}
+          className="typing-surface glass-panel animate-fade-in-up"
+          style={{ animationDelay: "0.15s" }}
         >
-          {/* Hidden Input */}
           <input
             ref={inputRef}
             type="text"
@@ -597,9 +614,17 @@ export default function Home() {
             className="absolute opacity-0 pointer-events-none"
             autoFocus
             disabled={isFinished}
+            aria-label="Typing input"
           />
 
-          {/* Words Display - Clean, no box */}
+          <div className="typing-header">
+            <p>Keep accuracy high, then push for speed.</p>
+            <div className="restart-chip">
+              <kbd>Tab</kbd>
+              <span>Restart</span>
+            </div>
+          </div>
+
           <div className="typing-area-clean">
             {wordStates.map((wordState, wordIdx) => (
               <span
@@ -624,7 +649,6 @@ export default function Home() {
                     {charState.char}
                   </span>
                 ))}
-                {/* Cursor at end of word if we're past all characters */}
                 {wordIdx === currentWordIndex &&
                   currentCharIndex >= words[wordIdx]?.length && (
                     <span className="char-clean current"> </span>
@@ -632,110 +656,66 @@ export default function Home() {
               </span>
             ))}
           </div>
+        </section>
+      </section>
+
+      <footer className="footer-shell w-full max-w-5xl animate-fade-in-up">
+        <div className="footer-links">
+          <a href="#">About</a>
+          <a href="#">Contact</a>
+          <a href="#">GitHub</a>
         </div>
+        <p>Built with care by KeyType</p>
+      </footer>
 
-        {/* Restart Hint */}
-        <div
-          className="flex items-center gap-3 text-sm text-gray-500 animate-fade-in-up mt-2"
-          style={{ animationDelay: "0.3s" }}
-        >
-          <kbd className="px-2 py-1 bg-blue-500/10 rounded text-blue-400 text-xs font-mono">
-            Tab
-          </kbd>
-          <span>to restart</span>
-        </div>
+      {isFinished && (
+        <div className="results-overlay animate-fade-in-up">
+          <div className="results-card glass-panel animate-scale-in">
+            <h2 className="results-title">Test Complete</h2>
 
-        {/* Results Modal */}
-        {isFinished && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in-up">
-            <div className="glass-card p-10 md:p-12 max-w-lg w-full mx-4 animate-scale-in">
-              <h2 className="text-3xl font-bold text-center mb-8 gradient-text">
-                Test Complete!
-              </h2>
-
-              <div className="grid grid-cols-2 gap-8 mb-10">
-                <div className="text-center">
-                  <div className="text-5xl font-bold text-blue-400 mb-1">
-                    {stats.wpm}
-                  </div>
-                  <div className="text-sm text-gray-400 uppercase tracking-wider">
-                    WPM
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-5xl font-bold text-blue-400 mb-1">
-                    {stats.accuracy}%
-                  </div>
-                  <div className="text-sm text-gray-400 uppercase tracking-wider">
-                    Accuracy
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-semibold text-blue-300 mb-1">
-                    {stats.rawWpm}
-                  </div>
-                  <div className="text-sm text-gray-400 uppercase tracking-wider">
-                    Raw WPM
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-semibold text-blue-300 mb-1">
-                    {currentWordIndex}
-                  </div>
-                  <div className="text-sm text-gray-400 uppercase tracking-wider">
-                    Words
-                  </div>
-                </div>
+            <div className="results-grid">
+              <div>
+                <p className="results-value">{stats.wpm}</p>
+                <p className="results-label">WPM</p>
               </div>
-
-              <div className="flex gap-4 mt-2">
-                <button
-                  onClick={initializeTest}
-                  className="btn-primary flex-1 flex items-center justify-center gap-2"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  Try Again
-                </button>
+              <div>
+                <p className="results-value">{stats.accuracy}%</p>
+                <p className="results-label">Accuracy</p>
+              </div>
+              <div>
+                <p className="results-value">{stats.rawWpm}</p>
+                <p className="results-label">Raw WPM</p>
+              </div>
+              <div>
+                <p className="results-value">{currentWordIndex}</p>
+                <p className="results-label">Words</p>
               </div>
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* Footer */}
-      <footer className="w-full max-w-4xl mt-16 md:mt-20 pt-10 border-t border-blue-500/10">
-        <div className="flex items-center justify-between text-sm text-gray-500">
-          <div className="flex items-center gap-4">
-            <a href="#" className="hover:text-blue-400 transition-colors">
-              About
-            </a>
-            <a href="#" className="hover:text-blue-400 transition-colors">
-              Contact
-            </a>
-            <a href="#" className="hover:text-blue-400 transition-colors">
-              Github
-            </a>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>Built with</span>
-            <span className="text-blue-400">♥</span>
-            <span>by KeyType</span>
+            <button
+              onClick={() => initializeTest()}
+              className="btn-primary w-full flex items-center justify-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Try Again
+            </button>
           </div>
         </div>
-      </footer>
+      )}
     </main>
   );
 }
+
