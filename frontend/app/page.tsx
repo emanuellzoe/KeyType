@@ -210,7 +210,6 @@ export default function Home() {
   const [correctChars, setCorrectChars] = useState(0);
   const [incorrectChars, setIncorrectChars] = useState(0);
   const [totalKeystrokes, setTotalKeystrokes] = useState(0);
-  const [startTime, setStartTime] = useState<number | null>(null);
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
@@ -239,7 +238,6 @@ export default function Home() {
     setCorrectChars(0);
     setIncorrectChars(0);
     setTotalKeystrokes(0);
-    setStartTime(null);
     inputRef.current?.focus();
   }, [selectedTime]);
 
@@ -323,7 +321,6 @@ export default function Home() {
     // Start timer on first input
     if (!isRunning && !isFinished) {
       setIsRunning(true);
-      setStartTime(Date.now());
     }
 
     setTotalKeystrokes((prev) => prev + 1);
