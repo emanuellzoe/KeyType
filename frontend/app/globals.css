@@ -276,7 +276,7 @@ kbd:focus-visible {
   height: 100%;
   width: 0;
   background: var(--accent-1);
-  transition: width 300ms ease;
+  transition: none;
 }
 
 .typing-surface {

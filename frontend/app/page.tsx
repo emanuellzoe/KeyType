@@ -217,6 +217,7 @@ export default function Home() {
   const [timeLeft, setTimeLeft] = useState(30);
   const [isRunning, setIsRunning] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [smoothProgress, setSmoothProgress] = useState(0);
 
   // Stats
   const [correctChars, setCorrectChars] = useState(0);
@@ -227,6 +228,7 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsContainerRef = useRef<HTMLDivElement>(null);
   const currentWordRef = useRef<HTMLSpanElement>(null);
+  const testStartedAtRef = useRef<number | null>(null);
 
   // Initialize words
   const initializeTest = useCallback((timeOverride?: number) => {
@@ -240,9 +242,11 @@ export default function Home() {
     setTimeLeft(duration);
     setIsRunning(false);
     setIsFinished(false);
+    setSmoothProgress(0);
     setCorrectChars(0);
     setIncorrectChars(0);
     setTotalKeystrokes(0);
+    testStartedAtRef.current = null;
     inputRef.current?.focus();
   }, [selectedTime]);
 
@@ -286,6 +290,7 @@ export default function Home() {
           if (prev <= 1) {
             setIsRunning(false);
             setIsFinished(true);
+            setSmoothProgress(100);
             return 0;
           }
           return prev - 1;
@@ -294,6 +299,31 @@ export default function Home() {
     }
     return () => clearInterval(interval);
   }, [isRunning, timeLeft]);
+
+  // Smooth progress animation driven by real elapsed time
+  useEffect(() => {
+    if (!isRunning) return;
+
+    let frameId = 0;
+    const totalDurationMs = selectedTime * 1000;
+
+    const animate = () => {
+      const startedAt = testStartedAtRef.current;
+      if (startedAt === null) return;
+
+      const elapsedMs = Date.now() - startedAt;
+      const nextProgress = Math.min(100, (elapsedMs / totalDurationMs) * 100);
+      setSmoothProgress(nextProgress);
+
+      if (nextProgress < 100) {
+        frameId = requestAnimationFrame(animate);
+      }
+    };
+
+    frameId = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(frameId);
+  }, [isRunning, selectedTime]);
 
   // Calculate WPM and accuracy
   const calculateStats = useCallback(() => {
@@ -315,10 +345,6 @@ export default function Home() {
   }, [correctChars, incorrectChars, totalKeystrokes, selectedTime, timeLeft]);
 
   const stats = calculateStats();
-  const progressPercentage = Math.min(
-    100,
-    Math.max(0, ((selectedTime - timeLeft) / selectedTime) * 100)
-  );
   const displayedTime = isRunning || isFinished ? timeLeft : selectedTime;
 
   // Handle input change
@@ -330,6 +356,7 @@ export default function Home() {
 
     // Start timer on first input
     if (!isRunning && !isFinished) {
+      testStartedAtRef.current = Date.now();
       setIsRunning(true);
     }
 
@@ -594,7 +621,7 @@ export default function Home() {
           <div className="progress-track">
             <div
               className="progress-fill"
-              style={{ width: `${progressPercentage}%` }}
+              style={{ width: `${smoothProgress}%` }}
             />
           </div>
         </div>
