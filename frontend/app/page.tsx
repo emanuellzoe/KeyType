@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 // Word lists for typing test
-const wordLists = {
-  common: [
+type Language = "en" | "id";
+
+const wordLists: Record<Language, string[]> = {
+  en: [
     "the",
     "be",
     "to",
@@ -166,20 +168,205 @@ const wordLists = {
     "leave",
     "city",
   ],
+  id: [
+    "yang",
+    "dan",
+    "untuk",
+    "dengan",
+    "tidak",
+    "akan",
+    "sudah",
+    "belum",
+    "dari",
+    "kepada",
+    "dalam",
+    "pada",
+    "adalah",
+    "bisa",
+    "harus",
+    "ingin",
+    "perlu",
+    "waktu",
+    "hari",
+    "pagi",
+    "siang",
+    "malam",
+    "cepat",
+    "lambat",
+    "tepat",
+    "baik",
+    "buruk",
+    "besar",
+    "kecil",
+    "panjang",
+    "pendek",
+    "tinggi",
+    "rendah",
+    "dekat",
+    "jauh",
+    "baru",
+    "lama",
+    "hidup",
+    "kerja",
+    "main",
+    "belajar",
+    "latihan",
+    "ketik",
+    "akurasi",
+    "kecepatan",
+    "ritme",
+    "fokus",
+    "stabil",
+    "siap",
+    "ulang",
+    "mulai",
+    "selesai",
+    "coba",
+    "tanya",
+    "jawab",
+    "lihat",
+    "dengar",
+    "bicara",
+    "tulis",
+    "baca",
+    "makan",
+    "minum",
+    "tidur",
+    "bangun",
+    "teman",
+    "keluarga",
+    "anak",
+    "orang",
+    "rumah",
+    "sekolah",
+    "kantor",
+    "jalan",
+    "kota",
+    "desa",
+    "negara",
+    "bahasa",
+    "indonesia",
+    "inggris",
+    "lokal",
+    "global",
+    "produk",
+    "proyek",
+    "tim",
+    "fitur",
+    "sistem",
+    "server",
+    "data",
+    "kode",
+    "layar",
+    "keyboard",
+    "mouse",
+    "internet",
+    "komputer",
+    "ponsel",
+    "aplikasi",
+    "masalah",
+    "solusi",
+    "tujuan",
+    "hasil",
+    "jelas",
+    "singkat",
+    "lengkap",
+    "mudah",
+    "susah",
+    "aman",
+    "aktif",
+    "tekan",
+    "spasi",
+    "huruf",
+    "kata",
+    "angka",
+    "kalimat",
+    "contoh",
+    "pilih",
+    "ubah",
+    "setelan",
+    "tes",
+    "sesi",
+    "wpm",
+    "nilai",
+    "skor",
+    "presisi",
+    "reaksi",
+    "gerak",
+    "konsisten",
+    "kebiasaan",
+    "tantangan",
+    "target",
+    "naik",
+    "turun",
+    "ulangi",
+    "cek",
+    "perbaiki",
+    "bangun",
+    "jalankan",
+    "henti",
+    "kembali",
+    "depan",
+    "belakang",
+    "antara",
+    "setiap",
+    "semua",
+    "beberapa",
+    "lebih",
+    "kurang",
+    "sangat",
+    "cukup",
+    "masih",
+    "hampir",
+    "tetap",
+    "sering",
+    "jarang",
+    "selalu",
+    "kadang",
+    "segera",
+    "pelan",
+    "lancar",
+    "nyaman",
+    "rapi",
+    "tegas",
+    "pasti",
+    "sederhana",
+    "kompleks",
+    "sesuai",
+    "cerdas",
+    "logis",
+    "praktis",
+    "teknis",
+    "kolaborasi",
+    "ringkas",
+    "akurat",
+  ],
 };
 
 // Generate random words for typing
-function generateWords(count: number): string[] {
+function generateWords(count: number, language: Language): string[] {
   const words: string[] = [];
-  const wordPool = wordLists.common;
+  const wordPool = wordLists[language];
   for (let i = 0; i < count; i++) {
     words.push(wordPool[Math.floor(Math.random() * wordPool.length)]);
   }
   return words;
 }
 
+function createWordSet(language: Language) {
+  const words = generateWords(100, language);
+  return {
+    words,
+    states: buildWordStates(words),
+  };
+}
+
 // Time options
 const timeOptions = [15, 30, 60, 120];
+const languageOptions: Array<{ value: Language; label: string }> = [
+  { value: "id", label: "Indonesia" },
+  { value: "en", label: "English" },
+];
 
 interface CharState {
   char: string;
@@ -201,12 +388,13 @@ function buildWordStates(sourceWords: string[]): WordState[] {
 }
 
 export default function Home() {
-  const initialWords = useMemo(() => generateWords(100), []);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>("id");
+  const initialWordSet = useMemo(() => createWordSet("id"), []);
 
   // Game state
-  const [words, setWords] = useState<string[]>(initialWords);
+  const [words, setWords] = useState<string[]>(initialWordSet.words);
   const [wordStates, setWordStates] = useState<WordState[]>(() =>
-    buildWordStates(initialWords)
+    initialWordSet.states
   );
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentCharIndex, setCurrentCharIndex] = useState(0);
@@ -231,9 +419,13 @@ export default function Home() {
   const testStartedAtRef = useRef<number | null>(null);
 
   // Initialize words
-  const initializeTest = useCallback((timeOverride?: number) => {
-    const duration = timeOverride ?? selectedTime;
-    const newWords = generateWords(100);
+  const initializeTest = useCallback((options?: {
+    timeOverride?: number;
+    languageOverride?: Language;
+  }) => {
+    const duration = options?.timeOverride ?? selectedTime;
+    const language = options?.languageOverride ?? selectedLanguage;
+    const newWords = generateWords(100, language);
     setWords(newWords);
     setWordStates(buildWordStates(newWords));
     setCurrentWordIndex(0);
@@ -248,7 +440,7 @@ export default function Home() {
     setTotalKeystrokes(0);
     testStartedAtRef.current = null;
     inputRef.current?.focus();
-  }, [selectedTime]);
+  }, [selectedLanguage, selectedTime]);
 
   // Keep input focused for immediate typing
   useEffect(() => {
@@ -502,7 +694,13 @@ export default function Home() {
   // Change time mode
   const handleTimeChange = (time: number) => {
     setSelectedTime(time);
-    initializeTest(time);
+    initializeTest({ timeOverride: time });
+  };
+
+  // Change language mode
+  const handleLanguageChange = (language: Language) => {
+    setSelectedLanguage(language);
+    initializeTest({ languageOverride: language });
   };
 
   return (
@@ -597,6 +795,40 @@ export default function Home() {
         </div>
 
         <div
+          className="mode-strip glass-panel animate-fade-in-up"
+          style={{ animationDelay: "0.08s" }}
+        >
+          <div className="mode-label">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 5h12M9 3v2m1 13h4m-2-2v2m5-12h4m-2-2v2m-7 4l4 4m0-4l-4 4"
+              />
+            </svg>
+            <span>Language</span>
+          </div>
+          {languageOptions.map((language) => (
+            <button
+              key={language.value}
+              onClick={() => handleLanguageChange(language.value)}
+              className={`mode-btn ${
+                selectedLanguage === language.value ? "active" : ""
+              }`}
+            >
+              {language.label}
+            </button>
+          ))}
+        </div>
+
+        <div
           className="stats-shell animate-fade-in-up"
           style={{ animationDelay: "0.1s" }}
         >
@@ -645,7 +877,11 @@ export default function Home() {
           />
 
           <div className="typing-header">
-            <p>Keep accuracy high, then push for speed.</p>
+            <p>
+              {selectedLanguage === "id"
+                ? "Jaga akurasi, lalu dorong kecepatan."
+                : "Keep accuracy high, then push for speed."}
+            </p>
             <div className="restart-chip">
               <kbd>Tab</kbd>
               <span>Restart</span>
