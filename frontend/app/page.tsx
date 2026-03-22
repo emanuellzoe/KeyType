@@ -1,401 +1,30 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Language, TestMode, WordState, TestStats } from "@/types";
+import { createWordSet, generateWords, buildWordStates } from "@/lib/typing";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { ModeSelector } from "@/components/ModeSelector";
+import { StatsDisplay } from "@/components/StatsDisplay";
+import { TypingArea } from "@/components/TypingArea";
+import { ResultsModal } from "@/components/ResultsModal";
+import { LeaderboardModal } from "@/components/LeaderboardModal";
 
-// Word lists for typing test
-type Language = "en" | "id";
-
-const wordLists: Record<Language, string[]> = {
-  en: [
-    "the",
-    "be",
-    "to",
-    "of",
-    "and",
-    "a",
-    "in",
-    "that",
-    "have",
-    "I",
-    "it",
-    "for",
-    "not",
-    "on",
-    "with",
-    "he",
-    "as",
-    "you",
-    "do",
-    "at",
-    "this",
-    "but",
-    "his",
-    "by",
-    "from",
-    "they",
-    "we",
-    "say",
-    "her",
-    "she",
-    "or",
-    "an",
-    "will",
-    "my",
-    "one",
-    "all",
-    "would",
-    "there",
-    "their",
-    "what",
-    "so",
-    "up",
-    "out",
-    "if",
-    "about",
-    "who",
-    "get",
-    "which",
-    "go",
-    "me",
-    "when",
-    "make",
-    "can",
-    "like",
-    "time",
-    "no",
-    "just",
-    "him",
-    "know",
-    "take",
-    "people",
-    "into",
-    "year",
-    "your",
-    "good",
-    "some",
-    "could",
-    "them",
-    "see",
-    "other",
-    "than",
-    "then",
-    "now",
-    "look",
-    "only",
-    "come",
-    "its",
-    "over",
-    "think",
-    "also",
-    "back",
-    "after",
-    "use",
-    "two",
-    "how",
-    "our",
-    "work",
-    "first",
-    "well",
-    "way",
-    "even",
-    "new",
-    "want",
-    "because",
-    "any",
-    "these",
-    "give",
-    "day",
-    "most",
-    "us",
-    "world",
-    "very",
-    "through",
-    "feel",
-    "before",
-    "high",
-    "right",
-    "still",
-    "find",
-    "here",
-    "thing",
-    "where",
-    "much",
-    "should",
-    "ask",
-    "big",
-    "while",
-    "home",
-    "such",
-    "put",
-    "why",
-    "against",
-    "old",
-    "run",
-    "follow",
-    "show",
-    "never",
-    "thought",
-    "always",
-    "mean",
-    "each",
-    "need",
-    "away",
-    "different",
-    "down",
-    "write",
-    "long",
-    "life",
-    "move",
-    "change",
-    "help",
-    "must",
-    "call",
-    "might",
-    "become",
-    "start",
-    "keep",
-    "let",
-    "begin",
-    "seem",
-    "child",
-    "country",
-    "point",
-    "group",
-    "problem",
-    "open",
-    "school",
-    "every",
-    "leave",
-    "city",
-  ],
-  id: [
-    "yang",
-    "dan",
-    "untuk",
-    "dengan",
-    "tidak",
-    "akan",
-    "sudah",
-    "belum",
-    "dari",
-    "kepada",
-    "dalam",
-    "pada",
-    "adalah",
-    "bisa",
-    "harus",
-    "ingin",
-    "perlu",
-    "waktu",
-    "hari",
-    "pagi",
-    "siang",
-    "malam",
-    "cepat",
-    "lambat",
-    "tepat",
-    "baik",
-    "buruk",
-    "besar",
-    "kecil",
-    "panjang",
-    "pendek",
-    "tinggi",
-    "rendah",
-    "dekat",
-    "jauh",
-    "baru",
-    "lama",
-    "hidup",
-    "kerja",
-    "main",
-    "belajar",
-    "latihan",
-    "ketik",
-    "akurasi",
-    "kecepatan",
-    "ritme",
-    "fokus",
-    "stabil",
-    "siap",
-    "ulang",
-    "mulai",
-    "selesai",
-    "coba",
-    "tanya",
-    "jawab",
-    "lihat",
-    "dengar",
-    "bicara",
-    "tulis",
-    "baca",
-    "makan",
-    "minum",
-    "tidur",
-    "bangun",
-    "teman",
-    "keluarga",
-    "anak",
-    "orang",
-    "rumah",
-    "sekolah",
-    "kantor",
-    "jalan",
-    "kota",
-    "desa",
-    "negara",
-    "bahasa",
-    "indonesia",
-    "inggris",
-    "lokal",
-    "global",
-    "produk",
-    "proyek",
-    "tim",
-    "fitur",
-    "sistem",
-    "server",
-    "data",
-    "kode",
-    "layar",
-    "keyboard",
-    "mouse",
-    "internet",
-    "komputer",
-    "ponsel",
-    "aplikasi",
-    "masalah",
-    "solusi",
-    "tujuan",
-    "hasil",
-    "jelas",
-    "singkat",
-    "lengkap",
-    "mudah",
-    "susah",
-    "aman",
-    "aktif",
-    "tekan",
-    "spasi",
-    "huruf",
-    "kata",
-    "angka",
-    "kalimat",
-    "contoh",
-    "pilih",
-    "ubah",
-    "setelan",
-    "tes",
-    "sesi",
-    "wpm",
-    "nilai",
-    "skor",
-    "presisi",
-    "reaksi",
-    "gerak",
-    "konsisten",
-    "kebiasaan",
-    "tantangan",
-    "target",
-    "naik",
-    "turun",
-    "ulangi",
-    "cek",
-    "perbaiki",
-    "bangun",
-    "jalankan",
-    "henti",
-    "kembali",
-    "depan",
-    "belakang",
-    "antara",
-    "setiap",
-    "semua",
-    "beberapa",
-    "lebih",
-    "kurang",
-    "sangat",
-    "cukup",
-    "masih",
-    "hampir",
-    "tetap",
-    "sering",
-    "jarang",
-    "selalu",
-    "kadang",
-    "segera",
-    "pelan",
-    "lancar",
-    "nyaman",
-    "rapi",
-    "tegas",
-    "pasti",
-    "sederhana",
-    "kompleks",
-    "sesuai",
-    "cerdas",
-    "logis",
-    "praktis",
-    "teknis",
-    "kolaborasi",
-    "ringkas",
-    "akurat",
-  ],
-};
-
-// Generate random words for typing
-function generateWords(count: number, language: Language): string[] {
-  const words: string[] = [];
-  const wordPool = wordLists[language];
-  for (let i = 0; i < count; i++) {
-    words.push(wordPool[Math.floor(Math.random() * wordPool.length)]);
-  }
-  return words;
-}
-
-function createWordSet(language: Language) {
-  const words = generateWords(100, language);
-  return {
-    words,
-    states: buildWordStates(words),
-  };
-}
-
-// Time options
 const timeOptions = [15, 30, 60, 120];
 const languageOptions: Array<{ value: Language; label: string }> = [
   { value: "id", label: "Indonesia" },
   { value: "en", label: "English" },
 ];
 
-interface CharState {
-  char: string;
-  state: "pending" | "correct" | "incorrect" | "extra";
-}
-
-interface WordState {
-  chars: CharState[];
-  completed: boolean;
-  hasError: boolean;
-}
-
-function buildWordStates(sourceWords: string[]): WordState[] {
-  return sourceWords.map((word) => ({
-    chars: word.split("").map((char) => ({ char, state: "pending" as const })),
-    completed: false,
-    hasError: false,
-  }));
-}
-
 export default function Home() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("id");
+  const [testMode, setTestMode] = useState<TestMode>("practice");
   const initialWordSet = useMemo(() => createWordSet("id"), []);
 
   // Game state
   const [words, setWords] = useState<string[]>(initialWordSet.words);
-  const [wordStates, setWordStates] = useState<WordState[]>(() =>
-    initialWordSet.states
-  );
+  const [wordStates, setWordStates] = useState<WordState[]>(() => initialWordSet.states);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentCharIndex, setCurrentCharIndex] = useState(0);
   const [inputValue, setInputValue] = useState("");
@@ -412,19 +41,23 @@ export default function Home() {
   const [incorrectChars, setIncorrectChars] = useState(0);
   const [totalKeystrokes, setTotalKeystrokes] = useState(0);
 
+  // Modals
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsContainerRef = useRef<HTMLDivElement>(null);
   const currentWordRef = useRef<HTMLSpanElement>(null);
   const testStartedAtRef = useRef<number | null>(null);
 
-  // Initialize words
-  const initializeTest = useCallback((options?: {
-    timeOverride?: number;
-    languageOverride?: Language;
-  }) => {
-    const duration = options?.timeOverride ?? selectedTime;
+  // Initialize test
+  const initializeTest = useCallback((options?: { timeOverride?: number; languageOverride?: Language; modeOverride?: TestMode }) => {
+    const mode = options?.modeOverride ?? testMode;
+    const duration = mode === "ranked" ? 60 : (options?.timeOverride ?? selectedTime);
     const language = options?.languageOverride ?? selectedLanguage;
+    
+    if (mode === "ranked" && duration !== selectedTime) setSelectedTime(60);
+
     const newWords = generateWords(100, language);
     setWords(newWords);
     setWordStates(buildWordStates(newWords));
@@ -439,35 +72,47 @@ export default function Home() {
     setIncorrectChars(0);
     setTotalKeystrokes(0);
     testStartedAtRef.current = null;
-    inputRef.current?.focus();
-  }, [selectedLanguage, selectedTime]);
+    
+    setTimeout(() => inputRef.current?.focus(), 10);
+  }, [selectedLanguage, selectedTime, testMode]);
 
-  // Keep input focused for immediate typing
+  // Handle Mode Change
+  const handleModeChange = (newMode: TestMode) => {
+    if (newMode === testMode) return;
+    setTestMode(newMode);
+    initializeTest({ modeOverride: newMode });
+  };
+
+  // Handle Time Change
+  const handleTimeChange = (time: number) => {
+    if (testMode === "ranked") return; 
+    setSelectedTime(time);
+    initializeTest({ timeOverride: time });
+  };
+
+  // Handle Language Change
+  const handleLanguageChange = (language: Language) => {
+    setSelectedLanguage(language);
+    initializeTest({ languageOverride: language });
+  };
+
+  // Auto-focus input
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
+  }, [isFinished, isLeaderboardOpen]);
 
   // Auto-scroll to current word
   useEffect(() => {
     if (currentWordRef.current && wordsContainerRef.current) {
-      const container =
-        wordsContainerRef.current.querySelector(".typing-area-clean");
+      const container = wordsContainerRef.current.querySelector('.typing-area-clean');
       if (container) {
         const wordElement = currentWordRef.current;
         const containerRect = container.getBoundingClientRect();
         const wordRect = wordElement.getBoundingClientRect();
-
-        // Calculate relative position
-        const wordOffsetTop =
-          wordRect.top - containerRect.top + container.scrollTop;
+        const wordOffsetTop = wordRect.top - containerRect.top + container.scrollTop;
         const lineHeight = wordRect.height * 1.5;
-
-        // Scroll if word is below the first line
         if (wordOffsetTop > lineHeight) {
-          container.scrollTo({
-            top: wordOffsetTop - lineHeight,
-            behavior: "smooth",
-          });
+          container.scrollTo({ top: wordOffsetTop - lineHeight, behavior: "smooth" });
         }
       }
     }
@@ -492,61 +137,59 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [isRunning, timeLeft]);
 
-  // Smooth progress animation driven by real elapsed time
+  // Smooth progress animation
   useEffect(() => {
     if (!isRunning) return;
-
     let frameId = 0;
     const totalDurationMs = selectedTime * 1000;
-
     const animate = () => {
       const startedAt = testStartedAtRef.current;
       if (startedAt === null) return;
-
       const elapsedMs = Date.now() - startedAt;
       const nextProgress = Math.min(100, (elapsedMs / totalDurationMs) * 100);
       setSmoothProgress(nextProgress);
-
-      if (nextProgress < 100) {
-        frameId = requestAnimationFrame(animate);
-      }
+      if (nextProgress < 100) frameId = requestAnimationFrame(animate);
     };
-
     frameId = requestAnimationFrame(animate);
-
     return () => cancelAnimationFrame(frameId);
   }, [isRunning, selectedTime]);
 
-  // Calculate WPM and accuracy
-  const calculateStats = useCallback(() => {
+  const calculateStats = useCallback((): TestStats => {
     const timeElapsed = selectedTime - timeLeft;
-    const minutes = timeElapsed / 60;
-
-    // WPM calculation (standard: 5 chars = 1 word)
-    const wpm = minutes > 0 ? Math.round(correctChars / 5 / minutes) : 0;
-
-    // Accuracy calculation
+    const minutes = timeElapsed > 0 ? timeElapsed / 60 : 0;
+    const wpm = minutes > 0 ? Math.round((correctChars / 5) / minutes) : 0;
     const totalTyped = correctChars + incorrectChars;
-    const accuracy =
-      totalTyped > 0 ? Math.round((correctChars / totalTyped) * 100) : 100;
+    const accuracy = totalTyped > 0 ? Math.round((correctChars / totalTyped) * 100) : 100;
+    const rawWpm = minutes > 0 ? Math.round((totalKeystrokes / 5) / minutes) : 0;
 
-    // Raw WPM (including errors)
-    const rawWpm = minutes > 0 ? Math.round(totalKeystrokes / 5 / minutes) : 0;
-
-    return { wpm, accuracy, rawWpm };
-  }, [correctChars, incorrectChars, totalKeystrokes, selectedTime, timeLeft]);
+    return { wpm, accuracy, rawWpm, time: selectedTime, mode: testMode, date: Date.now() };
+  }, [correctChars, incorrectChars, totalKeystrokes, selectedTime, timeLeft, testMode]);
 
   const stats = calculateStats();
   const displayedTime = isRunning || isFinished ? timeLeft : selectedTime;
 
-  // Handle input change
+  // Save Ranked Score when finished
+  useEffect(() => {
+    if (isFinished && testMode === "ranked") {
+      const saveScore = () => {
+        const finalStats = calculateStats();
+        if (finalStats.wpm === 0) return; 
+
+        const savedStatsStr = localStorage.getItem("keytype_ranked_scores");
+        const savedStats: TestStats[] = savedStatsStr ? JSON.parse(savedStatsStr) : [];
+        savedStats.push(finalStats);
+        localStorage.setItem("keytype_ranked_scores", JSON.stringify(savedStats));
+      };
+      saveScore();
+    }
+  }, [isFinished, testMode, calculateStats]);
+
+
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isFinished) return;
-
     const value = e.target.value;
     const currentWord = words[currentWordIndex];
 
-    // Start timer on first input
     if (!isRunning && !isFinished) {
       testStartedAtRef.current = Date.now();
       setIsRunning(true);
@@ -554,41 +197,29 @@ export default function Home() {
 
     setTotalKeystrokes((prev) => prev + 1);
 
-    // Check for space - move to next word
     if (value.endsWith(" ")) {
       const typedWord = value.trim();
-
-      // Update word state
       setWordStates((prev) => {
         const newStates = [...prev];
         const wordState = { ...newStates[currentWordIndex] };
 
-        // Check each character
         typedWord.split("").forEach((char, idx) => {
           if (idx < currentWord.length) {
             if (char === currentWord[idx]) {
-              wordState.chars[idx] = {
-                char: currentWord[idx],
-                state: "correct",
-              };
+              wordState.chars[idx] = { char: currentWord[idx], state: "correct" };
               setCorrectChars((p) => p + 1);
             } else {
-              wordState.chars[idx] = {
-                char: currentWord[idx],
-                state: "incorrect",
-              };
+              wordState.chars[idx] = { char: currentWord[idx], state: "incorrect" };
               wordState.hasError = true;
               setIncorrectChars((p) => p + 1);
             }
           } else {
-            // Extra characters
             wordState.chars.push({ char, state: "extra" });
             wordState.hasError = true;
             setIncorrectChars((p) => p + 1);
           }
         });
 
-        // Mark remaining chars as incorrect if word is incomplete
         for (let i = typedWord.length; i < currentWord.length; i++) {
           wordState.chars[i] = { char: currentWord[i], state: "incorrect" };
           wordState.hasError = true;
@@ -597,86 +228,69 @@ export default function Home() {
 
         wordState.completed = true;
         newStates[currentWordIndex] = wordState;
-
-        // Count space as correct char
         setCorrectChars((p) => p + 1);
-
         return newStates;
       });
 
-      // Move to next word
       setCurrentWordIndex((prev) => prev + 1);
       setCurrentCharIndex(0);
       setInputValue("");
+      
+      // Expand words if running out
+      if (currentWordIndex >= words.length - 10) {
+        const extraWords = generateWords(50, selectedLanguage);
+        setWords(prev => [...prev, ...extraWords]);
+        setWordStates(prev => [...prev, ...buildWordStates(extraWords)]);
+      }
       return;
     }
 
-    // Update current character states
     setInputValue(value);
     setCurrentCharIndex(value.length);
 
-    // Live character feedback
     setWordStates((prev) => {
       const newStates = [...prev];
       const wordState = { ...newStates[currentWordIndex] };
 
-      // Reset chars to original state
-      wordState.chars = currentWord.split("").map((char) => ({
-        char,
-        state: "pending" as const,
-      }));
+      wordState.chars = currentWord.split("").map((char) => ({ char, state: "pending" as const }));
       wordState.hasError = false;
 
-      // Update based on current input
       value.split("").forEach((char, idx) => {
         if (idx < currentWord.length) {
           if (char === currentWord[idx]) {
             wordState.chars[idx] = { char: currentWord[idx], state: "correct" };
           } else {
-            wordState.chars[idx] = {
-              char: currentWord[idx],
-              state: "incorrect",
-            };
+            wordState.chars[idx] = { char: currentWord[idx], state: "incorrect" };
             wordState.hasError = true;
           }
         } else {
-          // Extra characters typed
           wordState.chars.push({ char, state: "extra" });
           wordState.hasError = true;
         }
       });
-
       newStates[currentWordIndex] = wordState;
       return newStates;
     });
   };
 
-  // Handle key down for special keys
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Tab") {
       e.preventDefault();
       initializeTest();
     }
-
-    // Backspace handling for word boundary
     if (e.key === "Backspace" && inputValue === "" && currentWordIndex > 0) {
       e.preventDefault();
-      // Go back to previous word
       const prevWord = words[currentWordIndex - 1];
       setCurrentWordIndex((prev) => prev - 1);
       setInputValue(prevWord);
       setCurrentCharIndex(prevWord.length);
 
-      // Reset previous word state
       setWordStates((prev) => {
         const newStates = [...prev];
         newStates[currentWordIndex - 1] = {
           chars: prevWord.split("").map((char, idx) => ({
             char,
-            state:
-              idx < prevWord.length
-                ? ("correct" as const)
-                : ("pending" as const),
+            state: idx < prevWord.length ? "correct" as const : "pending" as const,
           })),
           completed: false,
           hasError: false,
@@ -686,299 +300,69 @@ export default function Home() {
     }
   };
 
-  // Focus input when clicking on words area
-  const handleWordsClick = () => {
-    inputRef.current?.focus();
-  };
-
-  // Change time mode
-  const handleTimeChange = (time: number) => {
-    setSelectedTime(time);
-    initializeTest({ timeOverride: time });
-  };
-
-  // Change language mode
-  const handleLanguageChange = (language: Language) => {
-    setSelectedLanguage(language);
-    initializeTest({ languageOverride: language });
-  };
+  const statusText = isFinished ? "Session complete" : isRunning ? (testMode === "ranked" ? "Ranked Test" : "Live Test") : (testMode === "ranked" ? "Ranked Mode" : "Ready");
 
   return (
     <main className="page-shell">
-      <header className="w-full max-w-5xl animate-fade-in-up">
-        <div className="top-nav glass-panel">
-          <div className="brand-cluster">
-            <div className="brand-mark">K</div>
-            <div>
-              <h1 className="brand-title">KeyType</h1>
-              <p className="brand-subtitle">Speed, rhythm, precision.</p>
-            </div>
-          </div>
-
-          <nav className="nav-actions">
-            <span className="status-pill">
-              {isFinished ? "Session complete" : isRunning ? "Live test" : "Ready"}
-            </span>
-            <button className="btn-icon" title="Settings" aria-label="Settings">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </button>
-            <button className="btn-icon" title="Profile" aria-label="Profile">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-            </button>
-          </nav>
-        </div>
-      </header>
+      <Header
+        statusText={statusText}
+        onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
+      />
 
       <section className="content-shell w-full max-w-5xl">
-        <div
-          className="mode-strip glass-panel animate-fade-in-up"
-          style={{ animationDelay: "0.05s" }}
-        >
-          <div className="mode-label">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>Duration</span>
-          </div>
-          {timeOptions.map((time) => (
-            <button
-              key={time}
-              onClick={() => handleTimeChange(time)}
-              className={`mode-btn ${selectedTime === time ? "active" : ""}`}
-            >
-              {time}s
-            </button>
-          ))}
-        </div>
+        <ModeSelector
+          mode={testMode}
+          onModeChange={handleModeChange}
+          language={selectedLanguage}
+          onLanguageChange={handleLanguageChange}
+          time={selectedTime}
+          onTimeChange={handleTimeChange}
+          timeOptions={timeOptions}
+          languageOptions={languageOptions}
+        />
 
-        <div
-          className="mode-strip glass-panel animate-fade-in-up"
-          style={{ animationDelay: "0.08s" }}
-        >
-          <div className="mode-label">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 5h12M9 3v2m1 13h4m-2-2v2m5-12h4m-2-2v2m-7 4l4 4m0-4l-4 4"
-              />
-            </svg>
-            <span>Language</span>
-          </div>
-          {languageOptions.map((language) => (
-            <button
-              key={language.value}
-              onClick={() => handleLanguageChange(language.value)}
-              className={`mode-btn ${
-                selectedLanguage === language.value ? "active" : ""
-              }`}
-            >
-              {language.label}
-            </button>
-          ))}
-        </div>
+        <StatsDisplay
+          displayedTime={displayedTime}
+          wpm={stats.wpm}
+          accuracy={stats.accuracy}
+          rawWpm={stats.rawWpm}
+          smoothProgress={smoothProgress}
+        />
 
-        <div
-          className="stats-shell animate-fade-in-up"
-          style={{ animationDelay: "0.1s" }}
-        >
-          <div className="stats-grid glass-panel">
-            <div className="stat-item">
-              <p className="stat-value text-shadow-glow">{displayedTime}</p>
-              <p className="stat-label">seconds</p>
-            </div>
-            <div className="stat-item">
-              <p className="stat-value">{stats.wpm}</p>
-              <p className="stat-label">wpm</p>
-            </div>
-            <div className="stat-item">
-              <p className="stat-value">{stats.accuracy}%</p>
-              <p className="stat-label">accuracy</p>
-            </div>
-            <div className="stat-item">
-              <p className="stat-value">{stats.rawWpm}</p>
-              <p className="stat-label">raw</p>
-            </div>
-          </div>
-          <div className="progress-track">
-            <div
-              className="progress-fill"
-              style={{ width: `${smoothProgress}%` }}
-            />
-          </div>
-        </div>
-
-        <section
-          ref={wordsContainerRef}
-          onClick={handleWordsClick}
-          className="typing-surface glass-panel animate-fade-in-up"
-          style={{ animationDelay: "0.15s" }}
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputValue}
-            onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            className="absolute opacity-0 pointer-events-none"
-            autoFocus
-            disabled={isFinished}
-            aria-label="Typing input"
-          />
-
-          <div className="typing-header">
-            <p>
-              {selectedLanguage === "id"
-                ? "Jaga akurasi, lalu dorong kecepatan."
-                : "Keep accuracy high, then push for speed."}
-            </p>
-            <div className="restart-chip">
-              <kbd>Tab</kbd>
-              <span>Restart</span>
-            </div>
-          </div>
-
-          <div className="typing-area-clean">
-            {wordStates.map((wordState, wordIdx) => (
-              <span
-                key={wordIdx}
-                ref={wordIdx === currentWordIndex ? currentWordRef : null}
-                className={`word-clean ${
-                  wordIdx < currentWordIndex ? "completed" : ""
-                } ${wordIdx === currentWordIndex ? "active" : ""} ${
-                  wordState.hasError && wordState.completed ? "error" : ""
-                }`}
-              >
-                {wordState.chars.map((charState, charIdx) => (
-                  <span
-                    key={charIdx}
-                    className={`char-clean ${charState.state} ${
-                      wordIdx === currentWordIndex &&
-                      charIdx === currentCharIndex
-                        ? "current"
-                        : ""
-                    }`}
-                  >
-                    {charState.char}
-                  </span>
-                ))}
-                {wordIdx === currentWordIndex &&
-                  currentCharIndex >= words[wordIdx]?.length && (
-                    <span className="char-clean current"> </span>
-                  )}
-              </span>
-            ))}
-          </div>
-        </section>
+        <TypingArea
+          ref={inputRef}
+          inputValue={inputValue}
+          onInputChange={handleInput}
+          onKeyDown={handleKeyDown}
+          isFinished={isFinished}
+          language={selectedLanguage}
+          wordStates={wordStates}
+          words={words}
+          currentWordIndex={currentWordIndex}
+          currentCharIndex={currentCharIndex}
+          wordsContainerRef={wordsContainerRef}
+          currentWordRef={currentWordRef}
+          onWordsClick={() => inputRef.current?.focus()}
+        />
       </section>
 
-      <footer className="footer-shell w-full max-w-5xl animate-fade-in-up">
-        <div className="footer-links">
-          <a href="#">About</a>
-          <a href="#">Contact</a>
-          <a href="#">GitHub</a>
-        </div>
-        <p>Built with care by KeyType</p>
-      </footer>
+      <Footer />
 
       {isFinished && (
-        <div className="results-overlay animate-fade-in-up">
-          <div className="results-card glass-panel animate-scale-in">
-            <h2 className="results-title">Test Complete</h2>
-
-            <div className="results-grid">
-              <div>
-                <p className="results-value">{stats.wpm}</p>
-                <p className="results-label">WPM</p>
-              </div>
-              <div>
-                <p className="results-value">{stats.accuracy}%</p>
-                <p className="results-label">Accuracy</p>
-              </div>
-              <div>
-                <p className="results-value">{stats.rawWpm}</p>
-                <p className="results-label">Raw WPM</p>
-              </div>
-              <div>
-                <p className="results-value">{currentWordIndex}</p>
-                <p className="results-label">Words</p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => initializeTest()}
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              Try Again
-            </button>
-          </div>
-        </div>
+        <ResultsModal
+          stats={stats}
+          wordsCount={currentWordIndex}
+          onRestart={initializeTest}
+        />
       )}
+
+      <LeaderboardModal
+        isOpen={isLeaderboardOpen}
+        onClose={() => {
+          setIsLeaderboardOpen(false);
+          inputRef.current?.focus();
+        }}
+      />
     </main>
   );
 }
-
