@@ -1,5 +1,5 @@
-import React, { forwardRef } from 'react';
-import { WordState, Language } from "@/types";
+import React, { forwardRef } from "react";
+import { WordState, Language, TestMode } from "@/types";
 
 interface TypingAreaProps {
   inputValue: string;
@@ -7,25 +7,38 @@ interface TypingAreaProps {
   onKeyDown: (e: React.KeyboardEvent) => void;
   isFinished: boolean;
   language: Language;
+  mode: TestMode;
   wordStates: WordState[];
   words: string[];
   currentWordIndex: number;
   currentCharIndex: number;
-  wordsContainerRef: React.RefObject<HTMLDivElement | null>;
+  wordsContainerRef: React.RefObject<HTMLElement | null>;
   currentWordRef: React.RefObject<HTMLSpanElement | null>;
   onWordsClick: () => void;
 }
 
 export const TypingArea = forwardRef<HTMLInputElement, TypingAreaProps>(({
-  inputValue, onInputChange, onKeyDown, isFinished, language,
+  inputValue, onInputChange, onKeyDown, isFinished, language, mode,
   wordStates, words, currentWordIndex, currentCharIndex,
   wordsContainerRef, currentWordRef, onWordsClick
 }, ref) => {
+  const headerCopy = mode === "ranked"
+    ? language === "id"
+      ? "Mode ranked tetap 60 detik dan hasilnya langsung masuk leaderboard lokal."
+      : "Ranked stays at 60 seconds and auto-saves your score to the local leaderboard."
+    : language === "id"
+      ? "Jaga ritme, tekan spasi untuk mengunci kata, lalu lanjut tanpa putus fokus."
+      : "Stay relaxed, hit space to lock each word, then keep the rhythm moving.";
+
+  const helperCopy = language === "id"
+    ? ["spasi menyelesaikan kata", "backspace kembali ke kata sebelumnya", "klik area ini untuk fokus"]
+    : ["space submits a word", "backspace jumps to the previous word", "click here to refocus"];
+
   return (
     <section
-      ref={wordsContainerRef as any}
+      ref={wordsContainerRef}
       onClick={onWordsClick}
-      className="typing-surface glass-panel animate-fade-in-up cursor-text"
+      className="typing-surface animate-fade-in-up cursor-text"
       style={{ animationDelay: "0.15s" }}
     >
       <input
@@ -34,17 +47,17 @@ export const TypingArea = forwardRef<HTMLInputElement, TypingAreaProps>(({
         value={inputValue}
         onChange={onInputChange}
         onKeyDown={onKeyDown}
-        className="absolute opacity-0 pointer-events-none"
+        className="typing-input-proxy"
         autoFocus
         disabled={isFinished}
         aria-label="Typing input"
       />
 
       <div className="typing-header">
-        <p>{language === "id" ? "Jaga akurasi, lalu dorong kecepatan." : "Keep accuracy high, then push for speed."}</p>
+        <p>{headerCopy}</p>
         <div className="restart-chip">
           <kbd>Tab</kbd>
-          <span>Restart</span>
+          <span>restart</span>
         </div>
       </div>
 
@@ -52,7 +65,7 @@ export const TypingArea = forwardRef<HTMLInputElement, TypingAreaProps>(({
         {wordStates.map((wordState, wordIdx) => (
           <span
             key={wordIdx}
-            ref={wordIdx === currentWordIndex ? (currentWordRef as any) : null}
+            ref={wordIdx === currentWordIndex ? currentWordRef : undefined}
             className={`word-clean ${wordIdx < currentWordIndex ? "completed" : ""} ${wordIdx === currentWordIndex ? "active" : ""} ${wordState.hasError && wordState.completed ? "error" : ""}`}
           >
             {wordState.chars.map((charState, charIdx) => (
@@ -67,6 +80,12 @@ export const TypingArea = forwardRef<HTMLInputElement, TypingAreaProps>(({
               <span className="char-clean current"> </span>
             )}
           </span>
+        ))}
+      </div>
+
+      <div className="typing-footer">
+        {helperCopy.map((item) => (
+          <span key={item}>{item}</span>
         ))}
       </div>
     </section>

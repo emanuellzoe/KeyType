@@ -6,13 +6,13 @@ interface HeaderProps {
 
 export function Header({ statusText, onOpenLeaderboard, onOpenSettings }: HeaderProps) {
   return (
-    <header className="w-full max-w-5xl animate-fade-in-up">
-      <div className="top-nav glass-panel">
+    <header className="w-full max-w-6xl animate-fade-in-up">
+      <div className="top-nav">
         <div className="brand-cluster">
-          <div className="brand-mark">K</div>
+          <div className="brand-mark">kt</div>
           <div>
-            <h1 className="brand-title">KeyType</h1>
-            <p className="brand-subtitle">Speed, rhythm, precision.</p>
+            <p className="brand-subtitle">typing arena</p>
+            <h1 className="brand-title">keytype</h1>
           </div>
         </div>
 
@@ -26,7 +26,13 @@ export function Header({ statusText, onOpenLeaderboard, onOpenSettings }: Header
               </svg>
             </button>
           )}
-          <button className="btn-icon" title="Leaderboard / Profile" aria-label="Leaderboard" onClick={onOpenLeaderboard}>
+          <button
+            className="nav-action-btn"
+            title="Leaderboard / Profile"
+            aria-label="Leaderboard"
+            onClick={onOpenLeaderboard}
+          >
+            <span>Leaderboard</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>

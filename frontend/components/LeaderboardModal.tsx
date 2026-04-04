@@ -1,4 +1,9 @@
-import { useState, useEffect } from "react";
+import { useMemo, useSyncExternalStore } from "react";
+import {
+  getRankedScoresServerSnapshot,
+  getRankedScoresSnapshot,
+  subscribeRankedScores,
+} from "@/lib/rankedScores";
 import { TestStats } from "@/types";
 
 interface LeaderboardModalProps {
@@ -7,27 +12,28 @@ interface LeaderboardModalProps {
 }
 
 export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
-  const [scores, setScores] = useState<TestStats[]>([]);
-
-  useEffect(() => {
-    if (isOpen) {
-      const savedScores = localStorage.getItem("keytype_ranked_scores");
-      if (savedScores) {
-        setScores(JSON.parse(savedScores).sort((a: TestStats, b: TestStats) => b.wpm - a.wpm));
-      }
-    }
-  }, [isOpen]);
+  const rankedScores = useSyncExternalStore(
+    subscribeRankedScores,
+    getRankedScoresSnapshot,
+    getRankedScoresServerSnapshot
+  );
+  const scores = useMemo(
+    () => [...rankedScores].sort((a: TestStats, b: TestStats) => b.wpm - a.wpm),
+    [rankedScores]
+  );
 
   if (!isOpen) return null;
 
+  const bestScore = scores[0]?.wpm ?? 0;
+
   return (
     <div className="results-overlay animate-fade-in-up" style={{ zIndex: 50 }}>
-      <div 
-        className="results-card glass-panel animate-scale-in" 
-        style={{ maxWidth: '42rem', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 className="results-title" style={{ marginBottom: 0 }}>Ranked Leaderboard</h2>
+      <div className="leaderboard-card animate-scale-in">
+        <div className="leaderboard-header">
+          <div>
+            <p className="results-kicker">ranked history</p>
+            <h2 className="results-title">Local leaderboard</h2>
+          </div>
           <button onClick={onClose} className="btn-icon">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -35,22 +41,35 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
           </button>
         </div>
 
+        <div className="leaderboard-summary">
+          <div className="leaderboard-summary-item">
+            <span>saved runs</span>
+            <strong>{scores.length}</strong>
+          </div>
+          <div className="leaderboard-summary-item">
+            <span>best score</span>
+            <strong>{bestScore > 0 ? `${bestScore} wpm` : "0 wpm"}</strong>
+          </div>
+        </div>
+
         {scores.length === 0 ? (
-          <p style={{ textAlign: 'center', opacity: 0.6, padding: '2rem 0' }}>
+          <p className="leaderboard-empty">
             No ranked history yet. Play Ranked mode to see your scores here!
           </p>
         ) : (
-          <div style={{ width: '100%' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', fontSize: '0.875rem', opacity: 0.7, fontWeight: 'bold', marginBottom: '1rem' }}>
-              <div>Date</div>
-              <div>WPM</div>
-              <div>Accuracy</div>
-              <div>Raw WPM</div>
+          <div className="leaderboard-table">
+            <div className="leaderboard-row leaderboard-row-head">
+              <div>run</div>
+              <div>date</div>
+              <div>wpm</div>
+              <div>accuracy</div>
+              <div>raw</div>
             </div>
             {scores.map((score, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.875rem', alignItems: 'center' }}>
-                <div>{score.date ? new Date(score.date).toLocaleDateString() : 'N/A'}</div>
-                <div style={{ fontWeight: 'bold', fontSize: '1.125rem', color: idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? '#cd7f32' : 'white' }}>
+              <div key={`${score.date}-${idx}`} className="leaderboard-row">
+                <div className={`leaderboard-rank ${idx < 3 ? `top-${idx + 1}` : ""}`}>#{idx + 1}</div>
+                <div>{score.date ? new Date(score.date).toLocaleDateString(undefined, { dateStyle: "medium" }) : "N/A"}</div>
+                <div className="leaderboard-score">
                   {score.wpm}
                 </div>
                 <div>{score.accuracy}%</div>

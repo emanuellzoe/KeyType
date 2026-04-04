@@ -18,45 +18,34 @@ export function ModeSelector({
   timeOptions, languageOptions
 }: ModeSelectorProps) {
   return (
-    <div className="flex flex-col gap-4 items-center w-full">
-      <div className="mode-strip glass-panel animate-fade-in-up" style={{ animationDelay: "0.02s" }}>
-        <div className="mode-label">
-           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-           </svg>
-           <span>Mode</span>
+    <section className="control-dock animate-fade-in-up" style={{ animationDelay: "0.02s" }}>
+      <div className="control-group">
+        <span className="control-label">mode</span>
+        <div className="control-buttons">
+          <button onClick={() => onModeChange("practice")} className={`mode-btn ${mode === "practice" ? "active" : ""}`}>practice</button>
+          <button onClick={() => onModeChange("ranked")} className={`mode-btn ${mode === "ranked" ? "active" : ""}`}>ranked</button>
         </div>
-        <button onClick={() => onModeChange("practice")} className={`mode-btn ${mode === "practice" ? "active" : ""}`}>Practice</button>
-        <button onClick={() => onModeChange("ranked")} className={`mode-btn ${mode === "ranked" ? "active" : ""}`}>Ranked</button>
       </div>
 
-      <div className="flex gap-4 items-center justify-center flex-wrap w-full">
-        <div className="mode-strip glass-panel animate-fade-in-up flex-1" style={{ animationDelay: "0.05s" }}>
-          <div className="mode-label">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Duration</span>
-          </div>
+      <div className="control-group">
+        <span className="control-label">time</span>
+        <div className="control-buttons">
           {timeOptions.map((opt) => (
             <button
               key={opt}
               onClick={() => onTimeChange(opt)}
               disabled={mode === "ranked"}
-              className={`mode-btn ${time === opt ? "active" : ""} ${mode === "ranked" ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`mode-btn ${time === opt ? "active" : ""} ${mode === "ranked" ? "is-disabled" : ""}`}
             >
-              {opt}s
+              {opt}
             </button>
           ))}
         </div>
+      </div>
 
-        <div className="mode-strip glass-panel animate-fade-in-up flex-1" style={{ animationDelay: "0.08s" }}>
-          <div className="mode-label">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1 13h4m-2-2v2m5-12h4m-2-2v2m-7 4l4 4m0-4l-4 4" />
-            </svg>
-            <span>Language</span>
-          </div>
+      <div className="control-group">
+        <span className="control-label">language</span>
+        <div className="control-buttons">
           {languageOptions.map((opt) => (
             <button
               key={opt.value}
@@ -68,6 +57,12 @@ export function ModeSelector({
           ))}
         </div>
       </div>
-    </div>
+
+      <p className="dock-note">
+        {mode === "ranked"
+          ? "Ranked keeps the old fixed 60-second challenge and still saves every finished run to your local leaderboard."
+          : "Practice still supports your old language and duration controls, now arranged like a cleaner command bar."}
+      </p>
+    </section>
   );
 }
